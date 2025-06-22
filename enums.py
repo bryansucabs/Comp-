@@ -1,10 +1,19 @@
+"""Definición de tokens del lenguaje de edición de video.
+
+Este módulo centraliza todas las enumeraciones y tablas de mapeo
+utilizadas por el lexer para convertir los lexemas de la entrada en
+tipos de token.
+"""
+
 import enum
 from dataclasses import dataclass
 
 
 class TokenSpec:
+    """Agrupa el enum de todos los tipos de token soportados."""
+
     class Type(enum.Enum):
-        # — Palabras clave —
+        # --- Palabras clave del lenguaje ---
         MAIN = enum.auto()
         IF = enum.auto()
         ELSE = enum.auto()
@@ -74,7 +83,9 @@ class TokenSpec:
         ERROR = enum.auto()
 
 
-# Mapeo único de lexemas a tipos de token
+# Mapeo único de lexemas a tipos de token. Cada entrada
+# relaciona el texto que aparece en el programa con el
+# tipo de token que debe generarse.
 LEXEME_TO_TOKEN: dict[str, TokenSpec.Type] = {
     # keywords
     "main": TokenSpec.Type.MAIN,
@@ -134,7 +145,7 @@ LEXEME_TO_TOKEN: dict[str, TokenSpec.Type] = {
     "@cortar": TokenSpec.Type.VIDEO_CORTAR,
 }
 
-
+# Representación de un token individual producido por el lexer.
 @dataclass(frozen=True)
 class Token:
     type: TokenSpec.Type
@@ -150,15 +161,21 @@ class Token:
 TokenType = TokenSpec.Type
 
 # Tablas derivadas útiles para el lexer
+# Conjuntos de palabras clave y operadores, extraídos del diccionario
+# principal para una búsqueda rápida.
 KEYWORDS = {k: v for k, v in LEXEME_TO_TOKEN.items() if k.isalpha()}
 compound_ops = {
     k: v
     for k, v in LEXEME_TO_TOKEN.items()
     if len(k) == 2 and not k.isalpha() and not k.startswith('@')
 }
+
+# Símbolos de un solo carácter que representan paréntesis, llaves, etc.
 symbols = {
     k: v
     for k, v in LEXEME_TO_TOKEN.items()
     if len(k) == 1 and not k.isalnum()
 }
+
+# Funciones de video que comienzan con '@'
 VIDEO_FUNCS = {k: v for k, v in LEXEME_TO_TOKEN.items() if k.startswith('@')}
