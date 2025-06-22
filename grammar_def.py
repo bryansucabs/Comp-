@@ -1,218 +1,408 @@
 # grammar_def.py
+"""
+Tabla LL(1) completa SIN atajos: cada función de video usa
+su propio token (VIDEO_RESIZE, VIDEO_FLIP, …).
+
+TokenType esperados
+-------------------
+VIDEO_RESIZE, VIDEO_FLIP, VIDEO_VELOCIDAD, VIDEO_FADEIN,
+VIDEO_FADEOUT, VIDEO_SILENCIO, VIDEO_EXTRAER_AUDIO,
+VIDEO_QUITAR_AUDIO, VIDEO_AGREGAR_MUSICA, VIDEO_CONCATENAR,
+VIDEO_CORTAR
+​—además de todos los ya definidos en enums.py (keywords, tipos,
+operadores, literales, IDENTIFIER, EOF, etc.).
+"""
+
 from enums import TokenType
 
-EPSILON: str = 'ε'
-START_SYMBOL: str = 'Program'
+EPSILON = "ε"
+START_SYMBOL = "Program"
 
-PARSING_TABLE = {
-    'Program': {
-        TokenType.MAIN: ['MainDecl', 'Block', TokenType.EOF]
+# ------------------------------------------------------------
+#                 TABLA LL(1)
+# ------------------------------------------------------------
+PARSING_TABLE: dict[str, dict[TokenType | str, list]] = {
+
+    # ────────── Programa ──────────
+    "Program": {
+        TokenType.MAIN: [TokenType.MAIN, "Block", TokenType.EOF],
     },
-    'MainDecl': {
-        TokenType.MAIN: [TokenType.MAIN, TokenType.COLON, TokenType.LPAREN, TokenType.RPAREN]
+
+    # ────────── Bloque { … } ──────────
+    "Block": {
+        TokenType.LBRACE: [TokenType.LBRACE, "StmtList", TokenType.RBRACE],
     },
-    'Block': {
-        TokenType.LBRACE: [TokenType.LBRACE, 'StmtList', TokenType.RBRACE]
+
+    "StmtList": {
+        TokenType.INT_TYPE:   ["Stmt", "StmtList"],
+        TokenType.FLOAT_TYPE: ["Stmt", "StmtList"],
+        TokenType.STRING_TYPE:["Stmt", "StmtList"],
+        TokenType.VIDEO_TYPE: ["Stmt", "StmtList"],
+        TokenType.AUDIO_TYPE: ["Stmt", "StmtList"],
+        TokenType.IDENTIFIER: ["Stmt", "StmtList"],
+        TokenType.IF:         ["Stmt", "StmtList"],
+        TokenType.WHILE:      ["Stmt", "StmtList"],
+        TokenType.RBRACE:     [EPSILON],
     },
-    'StmtList': {
-        TokenType.IDENTIFIER: ['Stmt', 'StmtList'],
-        TokenType.IF: ['Stmt', 'StmtList'],
-        TokenType.WHILE: ['Stmt', 'StmtList'],
-        TokenType.DEBUG_OUTPUT: ['Stmt', 'StmtList'],
-        TokenType.RBRACE: [EPSILON]
+
+    "Stmt": {
+        TokenType.INT_TYPE:   ["VarDecl", TokenType.SEMICOLON],
+        TokenType.FLOAT_TYPE: ["VarDecl", TokenType.SEMICOLON],
+        TokenType.STRING_TYPE:["VarDecl", TokenType.SEMICOLON],
+        TokenType.VIDEO_TYPE: ["VarDecl", TokenType.SEMICOLON],
+        TokenType.AUDIO_TYPE: ["VarDecl", TokenType.SEMICOLON],
+        TokenType.IDENTIFIER: ["Assignment", TokenType.SEMICOLON],
+        TokenType.IF:         ["IfStmt"],
+        TokenType.WHILE:      ["WhileStmt"],
     },
-    'Stmt': {
-        TokenType.IDENTIFIER: [TokenType.IDENTIFIER, 'StmtSuffix'],
-        TokenType.IF: ['Conditional'],
-        TokenType.WHILE: ['Loop'],
-        TokenType.DEBUG_OUTPUT: ['DebugStmt']
+
+    # ───────── Declaración de variables ─────────
+    "VarDecl": {
+        TokenType.INT_TYPE:   ["Type", TokenType.COLON, TokenType.IDENTIFIER, "VarInitOpt"],
+        TokenType.FLOAT_TYPE: ["Type", TokenType.COLON, TokenType.IDENTIFIER, "VarInitOpt"],
+        TokenType.STRING_TYPE:["Type", TokenType.COLON, TokenType.IDENTIFIER, "VarInitOpt"],
+        TokenType.VIDEO_TYPE: ["Type", TokenType.COLON, TokenType.IDENTIFIER, "VarInitOpt"],
+        TokenType.AUDIO_TYPE: ["Type", TokenType.COLON, TokenType.IDENTIFIER, "VarInitOpt"],
     },
-    'StmtSuffix': {
-        TokenType.COLON: [TokenType.COLON, 'Type', 'VarInit', TokenType.SEMICOLON],
-        TokenType.ASSIGN: [TokenType.ASSIGN, 'Expr', TokenType.SEMICOLON]
+    "VarInitOpt": {
+        TokenType.ASSIGN:    [TokenType.ASSIGN, "Expr"],
+        TokenType.SEMICOLON: [EPSILON],
     },
-    'VarInit': {
-        TokenType.ASSIGN: [TokenType.ASSIGN, 'Expr'],
-        TokenType.SEMICOLON: [EPSILON]
-    },
-    'Type': {
-        TokenType.INT_TYPE: [TokenType.INT_TYPE],
+
+    "Type": {
+        TokenType.INT_TYPE:   [TokenType.INT_TYPE],
         TokenType.FLOAT_TYPE: [TokenType.FLOAT_TYPE],
-        TokenType.STRING_TYPE: [TokenType.STRING_TYPE],
+        TokenType.STRING_TYPE:[TokenType.STRING_TYPE],
         TokenType.VIDEO_TYPE: [TokenType.VIDEO_TYPE],
-        TokenType.BOOL_TYPE: [TokenType.BOOL_TYPE]
-    },
-    'Conditional': {
-        TokenType.IF: [TokenType.IF, TokenType.LPAREN, 'Expr', TokenType.RPAREN, 'Block', 'ElseClause']
-    },
-    'ElseClause': {
-        TokenType.ELSE: [TokenType.ELSE, 'Block'],
-        TokenType.RBRACE: [EPSILON],
-        TokenType.IDENTIFIER: [EPSILON],
-        TokenType.IF: [EPSILON],
-        TokenType.WHILE: [EPSILON],
-        TokenType.DEBUG_OUTPUT: [EPSILON]
-    },
-    'Loop': {
-        TokenType.WHILE: [TokenType.WHILE, TokenType.LPAREN, 'Expr', TokenType.RPAREN, 'Block']
-    },
-    'DebugStmt': {
-        TokenType.DEBUG_OUTPUT: [TokenType.DEBUG_OUTPUT, 'Expr', TokenType.SEMICOLON]
+        TokenType.AUDIO_TYPE: [TokenType.AUDIO_TYPE],
     },
 
-    # Expresiones
-    'Expr': {
-        TokenType.NOT: ['LogicalOr'],
-        TokenType.LPAREN: ['LogicalOr'],
-        TokenType.INT_LITERAL: ['LogicalOr'],
-        TokenType.FLOAT_LITERAL: ['LogicalOr'],
-        TokenType.STRING_LITERAL: ['LogicalOr'],
-        TokenType.BOOL_LITERAL: ['LogicalOr'],
-        TokenType.IDENTIFIER: ['LogicalOr']
+    # ───────── Asignación ─────────
+    "Assignment": {
+        TokenType.IDENTIFIER: [TokenType.IDENTIFIER, TokenType.ASSIGN, "Expr"],
     },
-    'LogicalOr': {
-        TokenType.NOT: ['LogicalAnd', 'OrTail'],
-        TokenType.LPAREN: ['LogicalAnd', 'OrTail'],
-        TokenType.INT_LITERAL: ['LogicalAnd', 'OrTail'],
-        TokenType.FLOAT_LITERAL: ['LogicalAnd', 'OrTail'],
-        TokenType.STRING_LITERAL: ['LogicalAnd', 'OrTail'],
-        TokenType.BOOL_LITERAL: ['LogicalAnd', 'OrTail'],
-        TokenType.IDENTIFIER: ['LogicalAnd', 'OrTail']
+
+    # ───────── If / Else ─────────
+    "IfStmt": {
+        TokenType.IF: [TokenType.IF, TokenType.LPAREN, "Expr",TokenType.RPAREN, "Block", "ElseOpt"],
     },
-    'OrTail': {
-        TokenType.OR: [TokenType.OR, 'LogicalAnd', 'OrTail'],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+    "ElseOpt": {
+        TokenType.ELSE:      [TokenType.ELSE, "Block"],
+        TokenType.INT_TYPE:   [EPSILON], 
+        TokenType.FLOAT_TYPE: [EPSILON],
+        TokenType.STRING_TYPE:[EPSILON], 
+        TokenType.VIDEO_TYPE: [EPSILON],
+        TokenType.AUDIO_TYPE: [EPSILON], 
+        TokenType.IDENTIFIER: [EPSILON],
+        TokenType.IF:         [EPSILON], 
+        TokenType.WHILE:      [EPSILON],
+        TokenType.RBRACE:     [EPSILON],
     },
-    'LogicalAnd': {
-        TokenType.NOT: ['Equality', 'AndTail'],
-        TokenType.LPAREN: ['Equality', 'AndTail'],
-        TokenType.INT_LITERAL: ['Equality', 'AndTail'],
-        TokenType.FLOAT_LITERAL: ['Equality', 'AndTail'],
-        TokenType.STRING_LITERAL: ['Equality', 'AndTail'],
-        TokenType.BOOL_LITERAL: ['Equality', 'AndTail'],
-        TokenType.IDENTIFIER: ['Equality', 'AndTail']
+
+    # ───────── While ─────────
+    "WhileStmt": {
+        TokenType.WHILE: [TokenType.WHILE, TokenType.LPAREN, "Expr",
+                          TokenType.RPAREN, "Block"],
     },
-    'AndTail': {
-        TokenType.AND: [TokenType.AND, 'Equality', 'AndTail'],
-        TokenType.OR: [EPSILON],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+
+    # =========================================================
+    #                     EXPRESIONES
+    # =========================================================
+    # Expr
+    "Expr": {
+        TokenType.IDENTIFIER: ["OrExpr"],
+        TokenType.INT_LITERAL: ["OrExpr"],
+        TokenType.FLOAT_LITERAL: ["OrExpr"],
+        TokenType.STRING_LITERAL: ["OrExpr"],
+        TokenType.LPAREN: ["OrExpr"],
+        TokenType.NOT: ["OrExpr"],
+        TokenType.MINUS: ["OrExpr"],
+
+        TokenType.VIDEO_RESIZE: ["OrExpr"],
+        TokenType.VIDEO_FLIP: ["OrExpr"],
+        TokenType.VIDEO_VELOCIDAD: ["OrExpr"],
+        TokenType.VIDEO_FADEIN: ["OrExpr"],
+        TokenType.VIDEO_FADEOUT: ["OrExpr"],
+        TokenType.VIDEO_SILENCIO: ["OrExpr"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["OrExpr"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["OrExpr"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["OrExpr"],
+        TokenType.VIDEO_CONCATENAR: ["OrExpr"],
+        TokenType.VIDEO_CORTAR: ["OrExpr"],
     },
-    'Equality': {
-        TokenType.NOT: ['Relational', 'EqTail'],
-        TokenType.LPAREN: ['Relational', 'EqTail'],
-        TokenType.INT_LITERAL: ['Relational', 'EqTail'],
-        TokenType.FLOAT_LITERAL: ['Relational', 'EqTail'],
-        TokenType.STRING_LITERAL: ['Relational', 'EqTail'],
-        TokenType.BOOL_LITERAL: ['Relational', 'EqTail'],
-        TokenType.IDENTIFIER: ['Relational', 'EqTail']
+
+    # OrExpr
+    "OrExpr": {
+        TokenType.IDENTIFIER: ["AndExpr", "OrExpr'"],
+        TokenType.INT_LITERAL: ["AndExpr", "OrExpr'"],
+        TokenType.FLOAT_LITERAL: ["AndExpr", "OrExpr'"],
+        TokenType.STRING_LITERAL: ["AndExpr", "OrExpr'"],
+        TokenType.LPAREN: ["AndExpr", "OrExpr'"],
+        TokenType.NOT: ["AndExpr", "OrExpr'"],
+        TokenType.MINUS: ["AndExpr", "OrExpr'"],
+
+        TokenType.VIDEO_RESIZE: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_FLIP: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_VELOCIDAD: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_FADEIN: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_FADEOUT: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_SILENCIO: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_CONCATENAR: ["AndExpr", "OrExpr'"],
+        TokenType.VIDEO_CORTAR: ["AndExpr", "OrExpr'"],
     },
-    'EqTail': {
-        TokenType.EQ: [TokenType.EQ, 'Relational', 'EqTail'],
-        TokenType.NEQ: [TokenType.NEQ, 'Relational', 'EqTail'],
-        TokenType.AND: [EPSILON],
-        TokenType.OR: [EPSILON],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+    "OrExpr'": {
+        TokenType.OR: [TokenType.OR, "AndExpr", "OrExpr'"],
+        TokenType.RPAREN: [EPSILON], TokenType.SEMICOLON: [EPSILON],
+        TokenType.COMMA: [EPSILON], TokenType.RBRACKET: [EPSILON],
     },
-    'Relational': {
-        TokenType.NOT: ['Additive', 'RelTail'],
-        TokenType.LPAREN: ['Additive', 'RelTail'],
-        TokenType.INT_LITERAL: ['Additive', 'RelTail'],
-        TokenType.FLOAT_LITERAL: ['Additive', 'RelTail'],
-        TokenType.STRING_LITERAL: ['Additive', 'RelTail'],
-        TokenType.BOOL_LITERAL: ['Additive', 'RelTail'],
-        TokenType.IDENTIFIER: ['Additive', 'RelTail']
+
+    # AndExpr
+    "AndExpr": {
+        TokenType.IDENTIFIER: ["EqualityExpr", "AndExpr'"],
+        TokenType.INT_LITERAL: ["EqualityExpr", "AndExpr'"],
+        TokenType.FLOAT_LITERAL: ["EqualityExpr", "AndExpr'"],
+        TokenType.STRING_LITERAL: ["EqualityExpr", "AndExpr'"],
+        TokenType.LPAREN: ["EqualityExpr", "AndExpr'"],
+        TokenType.NOT: ["EqualityExpr", "AndExpr'"],
+        TokenType.MINUS: ["EqualityExpr", "AndExpr'"],
+
+        TokenType.VIDEO_RESIZE: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_FLIP: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_VELOCIDAD: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_FADEIN: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_FADEOUT: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_SILENCIO: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_CONCATENAR: ["EqualityExpr", "AndExpr'"],
+        TokenType.VIDEO_CORTAR: ["EqualityExpr", "AndExpr'"],
     },
-    'RelTail': {
-        TokenType.LT: [TokenType.LT, 'Additive', 'RelTail'],
-        TokenType.GT: [TokenType.GT, 'Additive', 'RelTail'],
-        TokenType.LE: [TokenType.LE, 'Additive', 'RelTail'],
-        TokenType.GE: [TokenType.GE, 'Additive', 'RelTail'],
-        TokenType.EQ: [EPSILON],
-        TokenType.NEQ: [EPSILON],
-        TokenType.AND: [EPSILON],
-        TokenType.OR: [EPSILON],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+    "AndExpr'": {
+        TokenType.AND: [TokenType.AND, "EqualityExpr", "AndExpr'"],
+        TokenType.OR: [EPSILON], TokenType.RPAREN: [EPSILON],
+        TokenType.SEMICOLON: [EPSILON], TokenType.COMMA: [EPSILON],
+        TokenType.RBRACKET: [EPSILON],
     },
-    'Additive': {
-        TokenType.NOT: ['Multiplicative', 'AddTail'],
-        TokenType.LPAREN: ['Multiplicative', 'AddTail'],
-        TokenType.INT_LITERAL: ['Multiplicative', 'AddTail'],
-        TokenType.FLOAT_LITERAL: ['Multiplicative', 'AddTail'],
-        TokenType.STRING_LITERAL: ['Multiplicative', 'AddTail'],
-        TokenType.BOOL_LITERAL: ['Multiplicative', 'AddTail'],
-        TokenType.IDENTIFIER: ['Multiplicative', 'AddTail']
+
+    # EqualityExpr
+    "EqualityExpr": {
+        TokenType.IDENTIFIER: ["RelExpr", "EqualityExpr'"],
+        TokenType.INT_LITERAL: ["RelExpr", "EqualityExpr'"],
+        TokenType.FLOAT_LITERAL: ["RelExpr", "EqualityExpr'"],
+        TokenType.STRING_LITERAL: ["RelExpr", "EqualityExpr'"],
+        TokenType.LPAREN: ["RelExpr", "EqualityExpr'"],
+        TokenType.NOT: ["RelExpr", "EqualityExpr'"],
+        TokenType.MINUS: ["RelExpr", "EqualityExpr'"],
+
+        TokenType.VIDEO_RESIZE: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_FLIP: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_VELOCIDAD: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_FADEIN: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_FADEOUT: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_SILENCIO: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_CONCATENAR: ["RelExpr", "EqualityExpr'"],
+        TokenType.VIDEO_CORTAR: ["RelExpr", "EqualityExpr'"],
     },
-    'AddTail': {
-        TokenType.PLUS: [TokenType.PLUS, 'Multiplicative', 'AddTail'],
-        TokenType.MINUS: [TokenType.MINUS, 'Multiplicative', 'AddTail'],
-        TokenType.CONCAT: [TokenType.CONCAT, 'Multiplicative', 'AddTail'],
-        TokenType.MULT: [EPSILON],
-        TokenType.DIV: [EPSILON],
-        TokenType.MOD: [EPSILON],
-        TokenType.EQ: [EPSILON],
-        TokenType.NEQ: [EPSILON],
-        TokenType.LT: [EPSILON],
-        TokenType.GT: [EPSILON],
-        TokenType.LE: [EPSILON],
-        TokenType.GE: [EPSILON],
-        TokenType.AND: [EPSILON],
-        TokenType.OR: [EPSILON],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+    "EqualityExpr'": {
+        TokenType.EQ: [TokenType.EQ, "RelExpr", "EqualityExpr'"],
+        TokenType.NEQ: [TokenType.NEQ, "RelExpr", "EqualityExpr'"],
+        TokenType.LT: [EPSILON], TokenType.LE: [EPSILON],
+        TokenType.GT: [EPSILON], TokenType.GE: [EPSILON],
+        TokenType.AND: [EPSILON], TokenType.OR: [EPSILON],
+        TokenType.RPAREN: [EPSILON], TokenType.SEMICOLON: [EPSILON],
+        TokenType.COMMA: [EPSILON], TokenType.RBRACKET: [EPSILON],
     },
-    'Multiplicative': {
-        TokenType.NOT: ['Unary', 'MulTail'],
-        TokenType.LPAREN: ['Unary', 'MulTail'],
-        TokenType.INT_LITERAL: ['Unary', 'MulTail'],
-        TokenType.FLOAT_LITERAL: ['Unary', 'MulTail'],
-        TokenType.STRING_LITERAL: ['Unary', 'MulTail'],
-        TokenType.BOOL_LITERAL: ['Unary', 'MulTail'],
-        TokenType.IDENTIFIER: ['Unary', 'MulTail']
+
+    # RelExpr
+    "RelExpr": {
+        TokenType.IDENTIFIER: ["AddExpr", "RelExpr'"],
+        TokenType.INT_LITERAL: ["AddExpr", "RelExpr'"],
+        TokenType.FLOAT_LITERAL: ["AddExpr", "RelExpr'"],
+        TokenType.STRING_LITERAL: ["AddExpr", "RelExpr'"],
+        TokenType.LPAREN: ["AddExpr", "RelExpr'"],
+        TokenType.NOT: ["AddExpr", "RelExpr'"],
+        TokenType.MINUS: ["AddExpr", "RelExpr'"],
+
+        TokenType.VIDEO_RESIZE: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_FLIP: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_VELOCIDAD: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_FADEIN: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_FADEOUT: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_SILENCIO: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_CONCATENAR: ["AddExpr", "RelExpr'"],
+        TokenType.VIDEO_CORTAR: ["AddExpr", "RelExpr'"],
     },
-    'MulTail': {
-        TokenType.MULT: [TokenType.MULT, 'Unary', 'MulTail'],
-        TokenType.DIV: [TokenType.DIV, 'Unary', 'MulTail'],
-        TokenType.MOD: [TokenType.MOD, 'Unary', 'MulTail'],
-        TokenType.PLUS: [EPSILON],
-        TokenType.MINUS: [EPSILON],
-        TokenType.CONCAT: [EPSILON],
-        TokenType.EQ: [EPSILON],
-        TokenType.NEQ: [EPSILON],
-        TokenType.LT: [EPSILON],
-        TokenType.GT: [EPSILON],
-        TokenType.LE: [EPSILON],
-        TokenType.GE: [EPSILON],
-        TokenType.AND: [EPSILON],
-        TokenType.OR: [EPSILON],
-        TokenType.SEMICOLON: [EPSILON],
-        TokenType.RPAREN: [EPSILON],
-        TokenType.RBRACE: [EPSILON]
+    "RelExpr'": {
+        TokenType.LT: [TokenType.LT, "AddExpr", "RelExpr'"],
+        TokenType.LE: [TokenType.LE, "AddExpr", "RelExpr'"],
+        TokenType.GT: [TokenType.GT, "AddExpr", "RelExpr'"],
+        TokenType.GE: [TokenType.GE, "AddExpr", "RelExpr'"],
+        TokenType.EQ: [EPSILON], TokenType.NEQ: [EPSILON],
+        TokenType.AND: [EPSILON], TokenType.OR: [EPSILON],
+        TokenType.RPAREN: [EPSILON], TokenType.SEMICOLON: [EPSILON],
+        TokenType.COMMA: [EPSILON], TokenType.RBRACKET: [EPSILON],
     },
-    'Unary': {
-        TokenType.NOT: [TokenType.NOT, 'Unary'],
-        TokenType.MINUS: [TokenType.MINUS, 'Unary'],
-        TokenType.LPAREN: ['Primary'],
-        TokenType.INT_LITERAL: ['Primary'],
-        TokenType.FLOAT_LITERAL: ['Primary'],
-        TokenType.STRING_LITERAL: ['Primary'],
-        TokenType.BOOL_LITERAL: ['Primary'],
-        TokenType.IDENTIFIER: ['Primary']
+
+    # AddExpr
+    "AddExpr": {
+        TokenType.IDENTIFIER: ["Term", "AddExpr'"],
+        TokenType.INT_LITERAL: ["Term", "AddExpr'"],
+        TokenType.FLOAT_LITERAL: ["Term", "AddExpr'"],
+        TokenType.STRING_LITERAL: ["Term", "AddExpr'"],
+        TokenType.LPAREN: ["Term", "AddExpr'"],
+        TokenType.NOT: ["Term", "AddExpr'"],
+        TokenType.MINUS: ["Term", "AddExpr'"],
+
+        TokenType.VIDEO_RESIZE: ["Term", "AddExpr'"],
+        TokenType.VIDEO_FLIP: ["Term", "AddExpr'"],
+        TokenType.VIDEO_VELOCIDAD: ["Term", "AddExpr'"],
+        TokenType.VIDEO_FADEIN: ["Term", "AddExpr'"],
+        TokenType.VIDEO_FADEOUT: ["Term", "AddExpr'"],
+        TokenType.VIDEO_SILENCIO: ["Term", "AddExpr'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["Term", "AddExpr'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["Term", "AddExpr'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["Term", "AddExpr'"],
+        TokenType.VIDEO_CONCATENAR: ["Term", "AddExpr'"],
+        TokenType.VIDEO_CORTAR: ["Term", "AddExpr'"],
     },
-    'Primary': {
+    "AddExpr'": {
+        TokenType.PLUS: [TokenType.PLUS, "Term", "AddExpr'"],
+        TokenType.MINUS: [TokenType.MINUS, "Term", "AddExpr'"],
+        TokenType.LT: [EPSILON], TokenType.LE: [EPSILON],
+        TokenType.GT: [EPSILON], TokenType.GE: [EPSILON],
+        TokenType.EQ: [EPSILON], TokenType.NEQ: [EPSILON],
+        TokenType.AND: [EPSILON], TokenType.OR: [EPSILON],
+        TokenType.RPAREN: [EPSILON], TokenType.SEMICOLON: [EPSILON],
+        TokenType.COMMA: [EPSILON], TokenType.RBRACKET: [EPSILON],
+    },
+
+    # Term
+    "Term": {
+        TokenType.IDENTIFIER: ["Factor", "Term'"],
+        TokenType.INT_LITERAL: ["Factor", "Term'"],
+        TokenType.FLOAT_LITERAL: ["Factor", "Term'"],
+        TokenType.STRING_LITERAL: ["Factor", "Term'"],
+        TokenType.LPAREN: ["Factor", "Term'"],
+        TokenType.NOT: ["Factor", "Term'"],
+        TokenType.MINUS: ["Factor", "Term'"],
+
+        TokenType.VIDEO_RESIZE: ["Factor", "Term'"],
+        TokenType.VIDEO_FLIP: ["Factor", "Term'"],
+        TokenType.VIDEO_VELOCIDAD: ["Factor", "Term'"],
+        TokenType.VIDEO_FADEIN: ["Factor", "Term'"],
+        TokenType.VIDEO_FADEOUT: ["Factor", "Term'"],
+        TokenType.VIDEO_SILENCIO: ["Factor", "Term'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["Factor", "Term'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["Factor", "Term'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["Factor", "Term'"],
+        TokenType.VIDEO_CONCATENAR: ["Factor", "Term'"],
+        TokenType.VIDEO_CORTAR: ["Factor", "Term'"],
+    },
+    "Term'": {
+        TokenType.MULT: [TokenType.MULT, "Factor", "Term'"],
+        TokenType.DIV:  [TokenType.DIV,  "Factor", "Term'"],
+        TokenType.PLUS: [EPSILON], TokenType.MINUS: [EPSILON],
+        TokenType.LT: [EPSILON], TokenType.LE: [EPSILON],
+        TokenType.GT: [EPSILON], TokenType.GE: [EPSILON],
+        TokenType.EQ: [EPSILON], TokenType.NEQ: [EPSILON],
+        TokenType.AND: [EPSILON], TokenType.OR: [EPSILON],
+        TokenType.RPAREN: [EPSILON], TokenType.SEMICOLON: [EPSILON],
+        TokenType.COMMA: [EPSILON], TokenType.RBRACKET: [EPSILON],
+    },
+
+    # Factor
+    "Factor": {
+        TokenType.IDENTIFIER: [TokenType.IDENTIFIER],
         TokenType.INT_LITERAL: [TokenType.INT_LITERAL],
         TokenType.FLOAT_LITERAL: [TokenType.FLOAT_LITERAL],
         TokenType.STRING_LITERAL: [TokenType.STRING_LITERAL],
-        TokenType.BOOL_LITERAL: [TokenType.BOOL_LITERAL],
-        TokenType.IDENTIFIER: [TokenType.IDENTIFIER],
-        TokenType.LPAREN: [TokenType.LPAREN, 'Expr', TokenType.RPAREN]
-    }
+        TokenType.LPAREN: [TokenType.LPAREN, "Expr", TokenType.RPAREN],
+        TokenType.NOT: [TokenType.NOT, "Factor"],
+        TokenType.MINUS: [TokenType.MINUS, "Factor"],
+
+        TokenType.VIDEO_RESIZE: ["FunctionCall"],
+        TokenType.VIDEO_FLIP: ["FunctionCall"],
+        TokenType.VIDEO_VELOCIDAD: ["FunctionCall"],
+        TokenType.VIDEO_FADEIN: ["FunctionCall"],
+        TokenType.VIDEO_FADEOUT: ["FunctionCall"],
+        TokenType.VIDEO_SILENCIO: ["FunctionCall"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["FunctionCall"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["FunctionCall"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["FunctionCall"],
+        TokenType.VIDEO_CONCATENAR: ["FunctionCall"],
+        TokenType.VIDEO_CORTAR: ["FunctionCall"],
+    },
+
+    # FunctionCall
+    "FunctionCall": {
+        TokenType.VIDEO_RESIZE: [TokenType.VIDEO_RESIZE, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_FLIP: [TokenType.VIDEO_FLIP, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_VELOCIDAD: [TokenType.VIDEO_VELOCIDAD, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_FADEIN: [TokenType.VIDEO_FADEIN, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_FADEOUT: [TokenType.VIDEO_FADEOUT, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_SILENCIO: [TokenType.VIDEO_SILENCIO, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_EXTRAER_AUDIO: [TokenType.VIDEO_EXTRAER_AUDIO, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_QUITAR_AUDIO: [TokenType.VIDEO_QUITAR_AUDIO, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_AGREGAR_MUSICA: [TokenType.VIDEO_AGREGAR_MUSICA, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_CONCATENAR: [TokenType.VIDEO_CONCATENAR, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+        TokenType.VIDEO_CORTAR: [TokenType.VIDEO_CORTAR, TokenType.LBRACKET, "ArgListOpt", TokenType.RBRACKET],
+    },
+    "ArgListOpt": {
+        TokenType.IDENTIFIER: ["ArgList"],
+        TokenType.INT_LITERAL: ["ArgList"],
+        TokenType.FLOAT_LITERAL: ["ArgList"],
+        TokenType.STRING_LITERAL: ["ArgList"],
+        TokenType.LPAREN: ["ArgList"],
+        TokenType.NOT: ["ArgList"],
+        TokenType.MINUS: ["ArgList"],
+
+        TokenType.VIDEO_RESIZE: ["ArgList"],
+        TokenType.VIDEO_FLIP: ["ArgList"],
+        TokenType.VIDEO_VELOCIDAD: ["ArgList"],
+        TokenType.VIDEO_FADEIN: ["ArgList"],
+        TokenType.VIDEO_FADEOUT: ["ArgList"],
+        TokenType.VIDEO_SILENCIO: ["ArgList"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["ArgList"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["ArgList"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["ArgList"],
+        TokenType.VIDEO_CONCATENAR: ["ArgList"],
+        TokenType.VIDEO_CORTAR: ["ArgList"],
+
+        TokenType.RBRACKET: [EPSILON],
+    },
+    "ArgList": {
+        TokenType.IDENTIFIER: ["Expr", "ArgList'"],
+        TokenType.INT_LITERAL: ["Expr", "ArgList'"],
+        TokenType.FLOAT_LITERAL: ["Expr", "ArgList'"],
+        TokenType.STRING_LITERAL: ["Expr", "ArgList'"],
+        TokenType.LPAREN: ["Expr", "ArgList'"],
+        TokenType.NOT: ["Expr", "ArgList'"],
+        TokenType.MINUS: ["Expr", "ArgList'"],
+
+        TokenType.VIDEO_RESIZE: ["Expr", "ArgList'"],
+        TokenType.VIDEO_FLIP: ["Expr", "ArgList'"],
+        TokenType.VIDEO_VELOCIDAD: ["Expr", "ArgList'"],
+        TokenType.VIDEO_FADEIN: ["Expr", "ArgList'"],
+        TokenType.VIDEO_FADEOUT: ["Expr", "ArgList'"],
+        TokenType.VIDEO_SILENCIO: ["Expr", "ArgList'"],
+        TokenType.VIDEO_EXTRAER_AUDIO: ["Expr", "ArgList'"],
+        TokenType.VIDEO_QUITAR_AUDIO: ["Expr", "ArgList'"],
+        TokenType.VIDEO_AGREGAR_MUSICA: ["Expr", "ArgList'"],
+        TokenType.VIDEO_CONCATENAR: ["Expr", "ArgList'"],
+        TokenType.VIDEO_CORTAR: ["Expr", "ArgList'"],
+    },
+    "ArgList'": {
+        TokenType.COMMA: [TokenType.COMMA, "Expr", "ArgList'"],
+        TokenType.RBRACKET: [EPSILON],
+    },
 }
