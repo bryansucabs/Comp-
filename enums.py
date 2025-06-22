@@ -1,79 +1,141 @@
 import enum
 from dataclasses import dataclass
 
+
 class TokenSpec:
     class Type(enum.Enum):
-        # ---------- Palabras clave ----------
-        MAIN   = "main"
-        IF     = "if"
-        ELSE   = "else"
-        WHILE  = "while"
-        EXPORT = "exportar"
-        AS     = "como"
+        # — Palabras clave —
+        MAIN = enum.auto()
+        IF = enum.auto()
+        ELSE = enum.auto()
+        WHILE = enum.auto()
+        EXPORT = enum.auto()
+        AS = enum.auto()
 
-        # ---------- Tipos (solo los necesarios) ----------
-        STRING_TYPE = "string"
-        FLOAT_TYPE  = "float"
-        INT_TYPE    = "int"
-        VIDEO_TYPE  = "video"
-        AUDIO_TYPE  = "audio"
+        # — Tipos de datos —
+        INT_TYPE = enum.auto()
+        FLOAT_TYPE = enum.auto()
+        STRING_TYPE = enum.auto()
+        VIDEO_TYPE = enum.auto()
+        AUDIO_TYPE = enum.auto()
 
-        # ---------- Operadores lógicos ----------
-        NOT = "not"
-        AND = "and"
-        OR  = "or"
+        # — Literales e identificadores —
+        INT_LITERAL = enum.auto()
+        FLOAT_LITERAL = enum.auto()
+        STRING_LITERAL = enum.auto()
+        IDENTIFIER = enum.auto()
 
-        # ---------- Operadores matemáticos ----------
-        ASSIGN = "="
-        PLUS   = "+"
-        MINUS  = "-"
-        MULT   = "*"
-        DIV    = "/"
+        # — Operadores lógicos —
+        NOT = enum.auto()
+        AND = enum.auto()
+        OR = enum.auto()
 
-        # ---------- Comparaciones ----------
-        EQ   = "=="
-        NEQ  = "!="
-        LT   = "<"
-        GT   = ">"
-        LE   = "<="
-        GE   = ">="
+        # — Operadores aritméticos —
+        ASSIGN = enum.auto()  # '='
+        PLUS = enum.auto()    # '+'
+        MINUS = enum.auto()   # '-'
+        MULT = enum.auto()    # '*'
+        DIV = enum.auto()     # '/'
 
-        # ---------- Símbolos ----------
-        COMMENT = "//"
-        LPAREN    = "("
-        RPAREN    = ")"
-        LBRACE    = "{"
-        RBRACE    = "}"
-        LBRACKET  = "["
-        RBRACKET  = "]"
-        COMMA     = ","
-        SEMICOLON = ";"
-        COLON     = ":"
+        # — Comparaciones —
+        EQ = enum.auto()   # '=='
+        NEQ = enum.auto()  # '!='
+        LT = enum.auto()   # '<'
+        GT = enum.auto()   # '>'
+        LE = enum.auto()   # '<='
+        GE = enum.auto()   # '>='
 
-        # ---------- Identificadores y literales ----------
-        IDENTIFIER     = "identifier"
-        INT_LITERAL    = "int_literal"
-        FLOAT_LITERAL  = "float_literal"
-        STRING_LITERAL = "string_literal"
+        # — Símbolos —
+        LPAREN = enum.auto()
+        RPAREN = enum.auto()
+        LBRACE = enum.auto()
+        RBRACE = enum.auto()
+        LBRACKET = enum.auto()
+        RBRACKET = enum.auto()
+        COMMA = enum.auto()
+        SEMICOLON = enum.auto()
+        COLON = enum.auto()
 
-        # ---------- Funciones especiales de video ----------
-        VIDEO_RESIZE         = "@resize"
-        VIDEO_FLIP           = "@flip"
-        VIDEO_VELOCIDAD      = "@velocidad"
-        VIDEO_FADEIN         = "@fadein"
-        VIDEO_FADEOUT        = "@fadeout"
-        VIDEO_SILENCIO       = "@silencio"
-        VIDEO_EXTRAER_AUDIO  = "@extraer_audio"
-        VIDEO_QUITAR_AUDIO   = "@quitar_audio"
-        VIDEO_AGREGAR_MUSICA = "@agregar_musica"
-        VIDEO_CONCATENAR     = "@concatenar"
-        VIDEO_CORTAR         = "@cortar"
+        # — Funciones especiales de video —
+        VIDEO_RESIZE = enum.auto()
+        VIDEO_FLIP = enum.auto()
+        VIDEO_VELOCIDAD = enum.auto()
+        VIDEO_FADEIN = enum.auto()
+        VIDEO_FADEOUT = enum.auto()
+        VIDEO_SILENCIO = enum.auto()
+        VIDEO_EXTRAER_AUDIO = enum.auto()
+        VIDEO_QUITAR_AUDIO = enum.auto()
+        VIDEO_AGREGAR_MUSICA = enum.auto()
+        VIDEO_CONCATENAR = enum.auto()
+        VIDEO_CORTAR = enum.auto()
 
-        # ---------- Especiales ----------
-        EOF   = "eof"
-        ERROR = "error"
+        # — Especiales —
+        EOF = enum.auto()
+        ERROR = enum.auto()
 
-@dataclass
+
+# Mapeo único de lexemas a tipos de token
+LEXEME_TO_TOKEN: dict[str, TokenSpec.Type] = {
+    # keywords
+    "main": TokenSpec.Type.MAIN,
+    "if": TokenSpec.Type.IF,
+    "else": TokenSpec.Type.ELSE,
+    "while": TokenSpec.Type.WHILE,
+    "exportar": TokenSpec.Type.EXPORT,
+    "como": TokenSpec.Type.AS,
+
+    # tipos
+    "int": TokenSpec.Type.INT_TYPE,
+    "float": TokenSpec.Type.FLOAT_TYPE,
+    "string": TokenSpec.Type.STRING_TYPE,
+    "video": TokenSpec.Type.VIDEO_TYPE,
+    "audio": TokenSpec.Type.AUDIO_TYPE,
+
+    # literales lógicos
+    "not": TokenSpec.Type.NOT,
+    "and": TokenSpec.Type.AND,
+    "or": TokenSpec.Type.OR,
+
+    # operadores compuestos
+    "==": TokenSpec.Type.EQ,
+    "!=": TokenSpec.Type.NEQ,
+    "<=": TokenSpec.Type.LE,
+    ">=": TokenSpec.Type.GE,
+
+    # operadores y símbolos simples
+    "=": TokenSpec.Type.ASSIGN,
+    "+": TokenSpec.Type.PLUS,
+    "-": TokenSpec.Type.MINUS,
+    "*": TokenSpec.Type.MULT,
+    "/": TokenSpec.Type.DIV,
+    "<": TokenSpec.Type.LT,
+    ">": TokenSpec.Type.GT,
+    ":": TokenSpec.Type.COLON,
+    ",": TokenSpec.Type.COMMA,
+    "{": TokenSpec.Type.LBRACE,
+    "}": TokenSpec.Type.RBRACE,
+    "[": TokenSpec.Type.LBRACKET,
+    "]": TokenSpec.Type.RBRACKET,
+    "(": TokenSpec.Type.LPAREN,
+    ")": TokenSpec.Type.RPAREN,
+    ";": TokenSpec.Type.SEMICOLON,
+
+    # video-funciones
+    "@resize": TokenSpec.Type.VIDEO_RESIZE,
+    "@flip": TokenSpec.Type.VIDEO_FLIP,
+    "@velocidad": TokenSpec.Type.VIDEO_VELOCIDAD,
+    "@fadein": TokenSpec.Type.VIDEO_FADEIN,
+    "@fadeout": TokenSpec.Type.VIDEO_FADEOUT,
+    "@silencio": TokenSpec.Type.VIDEO_SILENCIO,
+    "@extraer_audio": TokenSpec.Type.VIDEO_EXTRAER_AUDIO,
+    "@quitar_audio": TokenSpec.Type.VIDEO_QUITAR_AUDIO,
+    "@agregar_musica": TokenSpec.Type.VIDEO_AGREGAR_MUSICA,
+    "@concatenar": TokenSpec.Type.VIDEO_CONCATENAR,
+    "@cortar": TokenSpec.Type.VIDEO_CORTAR,
+}
+
+
+@dataclass(frozen=True)
 class Token:
     type: TokenSpec.Type
     value: str
@@ -82,3 +144,21 @@ class Token:
 
     def __str__(self) -> str:
         return f"{self.type.name:20} [ {self.value} ] -> {self.line}:{self.column}"
+
+
+# Alias para facilitar el acceso desde otros módulos
+TokenType = TokenSpec.Type
+
+# Tablas derivadas útiles para el lexer
+KEYWORDS = {k: v for k, v in LEXEME_TO_TOKEN.items() if k.isalpha()}
+compound_ops = {
+    k: v
+    for k, v in LEXEME_TO_TOKEN.items()
+    if len(k) == 2 and not k.isalpha() and not k.startswith('@')
+}
+symbols = {
+    k: v
+    for k, v in LEXEME_TO_TOKEN.items()
+    if len(k) == 1 and not k.isalnum()
+}
+VIDEO_FUNCS = {k: v for k, v in LEXEME_TO_TOKEN.items() if k.startswith('@')}
