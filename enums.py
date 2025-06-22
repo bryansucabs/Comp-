@@ -24,13 +24,11 @@ class TokenSpec:
         OR  = "or"
 
         # ---------- Operadores matemáticos ----------
-        CONCAT = "++"
         ASSIGN = "="
         PLUS   = "+"
         MINUS  = "-"
         MULT   = "*"
         DIV    = "/"
-        CONCAT = "++"
 
         # ---------- Comparaciones ----------
         EQ   = "=="
